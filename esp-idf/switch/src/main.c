@@ -56,6 +56,7 @@ void switch_control(void *pvParameters) {
         gpio_set_level(LED_NUM, is_pressed ? 1 : 0);
         if (is_pressed != prev_is_pressed) {
             ESP_LOGI(TAG, "%s", is_pressed ? "LED ON" : "LED OFF");
+            prev_is_pressed = is_pressed;
         }
         vTaskDelay(pdMS_TO_TICKS(10));
     }
