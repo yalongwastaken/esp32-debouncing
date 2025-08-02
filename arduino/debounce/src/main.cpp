@@ -9,97 +9,133 @@
 #define LED_NUM 2
 #define SWITCH_NUM 4
 
+// Debounce activators
+typedef enum
+{
+  DEBOUNCE_NO_EDGE,
+  DEBOUNCE_RISING_EDGE,
+  DEBOUNCE_FALLING_EDGE,
+} debounce_edge_t;
+
 // Software debounce class
-class SoftwareDebounce {
-  // Private variables
-  private:
-    uint8_t pin;                    // GPIO pin number
-    bool inverted;                  // True for active-low logic
-    bool cur_state;                 // Current raw pin state
-    bool prev_stable_state;         // Last confirmed debounced state
-    unsigned long last_change_time; // Timestamp of last state change
-    unsigned long delay_time;       // Debounce delay in milliseconds
-    bool state_changed;             // Flag for new debounced state available
+class SoftwareDebounce
+{
+private:
+  // Class variables
+  uint8_t pin;
+  bool inverted;
 
-  public:
-    // Constructor
-    SoftwareDebounce(uint8_t switch_pin = SWITCH_NUM, bool inverted_logic = true, unsigned long debounce_delay_time = 50) {
-      pin = switch_pin;
-      inverted = inverted_logic;
-      last_change_time = 0;
-      delay_time = debounce_delay_time;
-      state_changed = false;
-      pinMode(pin, inverted ? INPUT_PULLUP : INPUT_PULLDOWN);
-      cur_state = prev_stable_state = read_raw_state(pin);
+  // States
+  bool cur_state;
+  bool prev_stable_state;
+
+  // Timing
+  unsigned long delay_time;
+  unsigned long last_change_time;
+
+  // Sampling
+  unsigned int required_samples;
+  unsigned int consecutive_samples;
+
+public:
+  // Constructor
+  SoftwareDebounce(
+      uint8_t switch_pin = SWITCH_NUM,
+      bool inverted_logic = true,
+      unsigned long debounce_delay_time = 50,
+      unsigned int debounce_required_samples = 3)
+  {
+    pin = switch_pin;
+    inverted = inverted_logic;
+
+    // States
+    pinMode(pin, inverted ? INPUT_PULLUP : INPUT_PULLDOWN);
+    cur_state = prev_stable_state = read_raw_state(pin);
+
+    // Timing
+    delay_time = debounce_delay_time;
+    last_change_time = 0;
+
+    // Sampling
+    required_samples = debounce_required_samples;
+    consecutive_samples = 0;
+  }
+
+  // Update debounce
+  debounce_edge_t update(void)
+  {
+    int raw_state = read_raw_state(pin);
+    unsigned long cur_time = millis();
+
+    // Reset if state changed
+    if (raw_state != cur_state)
+    {
+      cur_state = raw_state;
+      last_change_time = cur_time;
+      consecutive_samples = 0;
+      return DEBOUNCE_NO_EDGE;
     }
 
-    // Update debounce
-    void update(void) {
-      int raw_state = read_raw_state(pin);
-      unsigned long cur_time = millis();
-      
-      // Reset timer if state changed
-      if (raw_state != cur_state) {
-        cur_state = raw_state;
-        last_change_time = cur_time;
-      }
-      
-      // Check if state has been stable long enough
-      if (!state_changed && (cur_time - last_change_time) > delay_time) {
-        if (cur_state != prev_stable_state) {
-          prev_stable_state = cur_state;
-          state_changed = true;
-        }
-      }
+    // Need more samples
+    if (consecutive_samples < required_samples)
+    {
+      consecutive_samples++;
+      return DEBOUNCE_NO_EDGE;
     }
 
-    // Detect rising edge (button press)
-    bool get_rising_edge(void) {
-      return get_changed() && prev_stable_state;
+    // Need more time
+    if ((cur_time - last_change_time) < delay_time)
+    {
+      return DEBOUNCE_NO_EDGE;
     }
 
-    // Detect falling edge (button release)
-    bool get_falling_edge(void) {
-      return get_changed() && !prev_stable_state;
+    // Check if actual state changed
+    if (raw_state != prev_stable_state)
+    {
+      prev_stable_state = cur_state;
+      return raw_state ? DEBOUNCE_RISING_EDGE : DEBOUNCE_FALLING_EDGE;
     }
 
-  private:
-    // Read pin with inversion logic
-    bool read_raw_state(int to_read) {
-      bool raw = digitalRead(to_read);
-      return inverted ? !raw : raw;
-    }
+    return DEBOUNCE_NO_EDGE;
+  }
 
-    // Check if state changed (clears flag after reading)
-    bool get_changed(void) {
-      if (state_changed) {
-        state_changed = false;
-        return true;
-      }
-      return false;
-    }
+private:
+  // Read pin with inversion logic
+  bool read_raw_state(int to_read)
+  {
+    bool raw = digitalRead(to_read);
+    return inverted ? !raw : raw;
+  }
 };
 
 // Global objects and variables
-SoftwareDebounce debouncer(SWITCH_NUM, true, 50);
+SoftwareDebounce debouncer(SWITCH_NUM, true, 50, 3);
 bool led_state = false;
 
 // Setup function
-void setup() {
+void setup()
+{
+  // Serial setup
   Serial.begin(115200);
   Serial.println("Software Debounce (Arduino): Starting program.");
+
+  // LED setup
   pinMode(LED_NUM, OUTPUT);
   digitalWrite(LED_NUM, led_state);
 }
 
 // Main loop
-void loop() {
-  debouncer.update();
-  
+void loop()
+{
+  debounce_edge_t debounce_result = debouncer.update();
+
   // Toggle LED on button press
-  if (debouncer.get_rising_edge()) {
+  if (debounce_result == DEBOUNCE_RISING_EDGE)
+  {
     led_state = !led_state;
     digitalWrite(LED_NUM, led_state);
-    Serial.println("Software Debounce (Arduino): " + String(led_state ? "LED ON" : "LED OFF"));
+    Serial.print("Software Debounce (Arduino): LED ");
+    Serial.println(led_state ? "ON" : "OFF");
   }
+  delay(1);
 }
