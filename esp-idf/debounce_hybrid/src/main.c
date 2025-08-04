@@ -113,7 +113,6 @@ void debounce_init(Software_Debounce *self, gpio_num_t pin_num, bool debounce_in
 
     // Timing
     self->last_change_tick = xTaskGetTickCount();
-
 }
 
 debounce_edge_t debounce_update(Software_Debounce *self)
