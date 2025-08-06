@@ -38,48 +38,48 @@ typedef enum
     DEBOUNCE_INTR_INIT_ERR,
 } debounce_err_t;
 /**
-* @brief Initialize LED GPIO configuration and handler structure
-* @param self Pointer to LED handler structure to initialize
-* @param pin GPIO pin number for the LED
-* @return DEBOUNCE_INTR_OK on success, DEBOUNCE_INTR_INIT_ERR on failure
-*/
+ * @brief Initialize LED GPIO configuration and handler structure
+ * @param self Pointer to LED handler structure to initialize
+ * @param pin GPIO pin number for the LED
+ * @return DEBOUNCE_INTR_OK on success, DEBOUNCE_INTR_INIT_ERR on failure
+ */
 static debounce_err_t gpio_led_init(led_handler_t *self, gpio_num_t pin);
 
 /**
-* @brief Initialize switch GPIO configuration with interrupt capability
-* @param pin GPIO pin number for the switch/button
-* @return DEBOUNCE_INTR_OK on success, DEBOUNCE_INTR_INIT_ERR on failure
-*/
+ * @brief Initialize switch GPIO configuration with interrupt capability
+ * @param pin GPIO pin number for the switch/button
+ * @return DEBOUNCE_INTR_OK on success, DEBOUNCE_INTR_INIT_ERR on failure
+ */
 static debounce_err_t gpio_switch_init(gpio_num_t pin);
 
 /**
-* @brief Initialize both LED and switch GPIO configurations
-* @param self Pointer to LED handler structure to initialize
-* @param led_pin GPIO pin number for the LED
-* @param switch_pin GPIO pin number for the switch/button
-* @return DEBOUNCE_INTR_OK on success, DEBOUNCE_INTR_INIT_ERR on failure
-*/
+ * @brief Initialize both LED and switch GPIO configurations
+ * @param self Pointer to LED handler structure to initialize
+ * @param led_pin GPIO pin number for the LED
+ * @param switch_pin GPIO pin number for the switch/button
+ * @return DEBOUNCE_INTR_OK on success, DEBOUNCE_INTR_INIT_ERR on failure
+ */
 static debounce_err_t gpio_init(led_handler_t *self, gpio_num_t led_pin, gpio_num_t switch_pin);
 
 /**
-* @brief GPIO interrupt service routine for button press detection
-* @param arg Unused parameter (required by ISR signature)
-* @note This function is placed in IRAM for fast execution
-* @note Starts/restarts debounce timer to filter switch bounce
-*/
+ * @brief GPIO interrupt service routine for button press detection
+ * @param arg Unused parameter (required by ISR signature)
+ * @note This function is placed in IRAM for fast execution
+ * @note Starts/restarts debounce timer to filter switch bounce
+ */
 static void IRAM_ATTR gpio_isr_handler(void *arg);
 
 /**
-* @brief Timer callback function executed after debounce period
-* @param arg Pointer to led_handler_t structure
-* @note Toggles LED state if button is still pressed after debounce delay
-*/
+ * @brief Timer callback function executed after debounce period
+ * @param arg Pointer to led_handler_t structure
+ * @note Toggles LED state if button is still pressed after debounce delay
+ */
 static void debounce_timer_callback(void *arg);
 
 /**
-* @brief Clean up allocated resources and GPIO configurations
-* @note Stops and deletes timer, removes ISR handlers, uninstalls ISR service
-*/
+ * @brief Clean up allocated resources and GPIO configurations
+ * @note Stops and deletes timer, removes ISR handlers, uninstalls ISR service
+ */
 static void app_cleanup(void);
 
 /**
@@ -244,7 +244,7 @@ static debounce_err_t gpio_init(led_handler_t *self, gpio_num_t led_pin, gpio_nu
 }
 
 // TODO: Add error checking
-static void IRAM_ATTR gpio_isr_handler(void *arg)
+static void gpio_isr_handler(void *arg)
 {
     // start/restart debounce timer
     portENTER_CRITICAL_ISR(&timer_spinlock);
